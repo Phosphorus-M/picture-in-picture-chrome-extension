@@ -12,7 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+function enablePipOnTheWebsite() {
+  const host = location.hostname || "";
+  const isNetflix =
+    host === "netflix.com" || host.endsWith(".netflix.com");
+
+  if (!isNetflix) {
+    return;
+  }
+
+  const enablePipOnVideos = () => {
+    const video = document.querySelector("video");
+    try {
+      console.log("Enabling picture-in-picture for", video);
+      if (video.hasAttribute("disablepictureinpicture")) {
+        video.removeAttribute("disablepictureinpicture");
+      }
+    } catch (e) {}
+  };
+
+  enablePipOnVideos();
+
+  const target = document.documentElement || document.body;
+  if (target) {
+    const observer = new MutationObserver(() => {
+      enablePipOnVideos();
+    });
+    observer.observe(target, { childList: true, subtree: true });
+  }
+}
+
 function findLargestPlayingVideo() {
+  enablePipOnTheWebsite();
   const videos = Array.from(document.querySelectorAll('video'))
     .filter(video => video.readyState != 0)
     .filter(video => video.disablePictureInPicture == false)
@@ -53,12 +84,35 @@ function maybeUpdatePictureInPictureVideo(entries, observer) {
 
 (async () => {
   const video = findLargestPlayingVideo();
-  if (!video) {
+  if (video) {
+    if (video.hasAttribute('__pip__')) {
+      document.exitPictureInPicture();
+      return;
+    }
+    await requestPictureInPicture(video);
     return;
   }
-  if (video.hasAttribute('__pip__')) {
-    document.exitPictureInPicture();
-    return;
-  }
-  await requestPictureInPicture(video);
+
+  const timeout = 10000;
+  const start = Date.now();
+  await new Promise((resolve) => {
+    const observer = new MutationObserver(async () => {
+      const v = findLargestPlayingVideo();
+      if (v) {
+        observer.disconnect();
+        if (!v.hasAttribute('__pip__')) {
+          await requestPictureInPicture(v);
+        }
+        resolve();
+      } else if (Date.now() - start > timeout) {
+        observer.disconnect();
+        resolve();
+      }
+    });
+    observer.observe(document.documentElement || document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+    });
+  });
 })();
