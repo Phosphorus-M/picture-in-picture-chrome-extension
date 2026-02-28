@@ -14,20 +14,22 @@
 
 function enablePipOnTheWebsite() {
   const host = location.hostname || "";
-  const isNetflix =
-    host === "netflix.com" || host.endsWith(".netflix.com");
+  const isStreamingPlatform =
+    host === "netflix.com" || host.endsWith(".netflix.com") || host === "disneyplus.com" || host.endsWith(".disneyplus.com");
 
-  if (!isNetflix) {
+  if (!isStreamingPlatform) {
     return;
   }
 
   const enablePipOnVideos = () => {
-    const video = document.querySelector("video");
+    const videos = document.querySelectorAll("video");
     try {
-      console.log("Enabling picture-in-picture for", video);
-      if (video.hasAttribute("disablepictureinpicture")) {
-        video.removeAttribute("disablepictureinpicture");
-      }
+      videos.forEach(video => {
+        console.log("Enabling picture-in-picture for", video);
+        if (video.hasAttribute("disablepictureinpicture")) {
+          video.removeAttribute("disablepictureinpicture");
+        }
+      });
     } catch (e) {}
   };
 
